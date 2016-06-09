@@ -35,11 +35,9 @@ async def receive_send(websocket, path):
     try:
         while True:
             msg = await websocket.recv()
-            print("< {}".format(msg))
             ans = {}
             ans['data'] = msg
             await asyncio.wait([ws.send(json.dumps(ans)) for ws in clients])
-            print("> {}".format(ans))
             if re.match(' *bot +.+ +.+ *', msg) != None:
                 command_list = re.split(" +", msg)[1:]
                 command_dic = {'command': command_list[0], 'data': command_list[1]}
@@ -47,6 +45,9 @@ async def receive_send(websocket, path):
                 bt.generate_hash()
                 ans['data'] = bt.hash
                 await asyncio.wait([ws.send(json.dumps(ans)) for ws in clients])
+
+    except websockets.exceptions.ConnectionClosed:
+        pass
 
     finally:
         clients.remove(websocket)
