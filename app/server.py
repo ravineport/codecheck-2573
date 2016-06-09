@@ -6,6 +6,10 @@ from threading import Thread
 import asyncio
 import websockets
 import json
+import bot
+import re
+
+clients = set()
 
 #serving index.html file on "http://localhost:9000"
 def httpHandler():
@@ -25,19 +29,27 @@ def httpHandler():
 
 async def receive_send(websocket, path):
     # Please write your code here
-    # try:
-    #     print("Receiving ...")
-    # except KeyboardInterrupt:
-    #     print('\nCtrl-C (SIGINT) caught. Exiting...')
 
-    while True:
-        msg = await websocket.recv()
-        print("< {}".format(msg))
+    global clients
+    clients.add(websocket)
+    try:
+        while True:
+            msg = await websocket.recv()
+            print("< {}".format(msg))
+            ans = {}
+            ans['data'] = msg
+            await asyncio.wait([ws.send(json.dumps(ans)) for ws in clients])
+            print("> {}".format(ans))
+            if re.match(' *bot +.+ +.+ *', msg) != None:
+                command_list = re.split(" +", msg)[1:]
+                command_dic = {'command': command_list[0], 'data': command_list[1]}
+                bt = bot.Bot(command_dic)
+                bt.generate_hash()
+                ans['data'] = bt.hash
+                await asyncio.wait([ws.send(json.dumps(ans)) for ws in clients])
 
-        greeting = {}
-        greeting['data'] = msg
-        await websocket.send(json.dumps(greeting))
-        print("> {}".format(greeting))
+    finally:
+        clients.remove(websocket)
 
 
 if __name__ == '__main__':
